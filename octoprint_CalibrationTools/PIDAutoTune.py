@@ -19,7 +19,7 @@ CMD_PID_GET_VALUES = "pid_getValues"
 # !!DEBUG:send p:18.84 i:1.18 d:201.41
 # !!DEBUG:send echo: M304 P131.06 I11.79 D971.23
 # !!DEBUG:send M304 P131.06 I11.79 D971.23
-allPIDsFormats = r".*p:{0,1}\s{0,1}?(?P<p>\d{1,3}.\d{1,3})\sk*i:{0,1}\s{0,1}?(?P<i>\d{1,3}.\d{1,3})\sk*d:{0,1}\s{0,1}?(?P<d>\d{1,3}.\d{1,3})"
+allPIDsFormats = r".*p:?\s*(?P<p>-?\d+(\.\d+)?)\s*i:?\s*(?P<i>-?\d+(\.\d+)?)\s*d:?\s*(?P<d>-?\d+(\.\d+)?)"
 
 class API(octoprint.plugin.SimpleApiPlugin):
     pidHotEndCycles = []
