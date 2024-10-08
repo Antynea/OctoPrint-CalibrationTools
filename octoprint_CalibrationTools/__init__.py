@@ -102,12 +102,12 @@ class CalibrationtoolsPlugin(
 
                 # version check: github repository
                 "type": "github_release",
-                "user": "SergiuToporjinschi",
+                "user": "Antynea",
                 "repo": "OctoPrint-CalibrationTools",
                 "current": self._plugin_version,
 
                 # update method: pip
-                "pip": "https://github.com/SergiuToporjinschi/OctoPrint-CalibrationTools/archive/{target_version}.zip",
+                "pip": "https://github.com/Antynea/OctoPrint-CalibrationTools/archive/{target_version}.zip",
             }
         }
 
