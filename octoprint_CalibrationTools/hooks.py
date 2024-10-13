@@ -7,6 +7,11 @@ import threading
 import traceback
 import types
 
+# Import conditionnel pour Callable
+try:
+    from collections.abc import Callable  # Pour Python 3.10 et plus
+except ImportError:
+    from collections import Callable  # Pour Python < 3.10
 
 class Hooks():
     trackTemp = True
@@ -19,7 +24,7 @@ class Hooks():
                 return line
             for waiter in self.gCodeWaiters:
                 reg = waiter["regex"]
-                waiter["callCount"] = waiter["callCount"] + 1
+                waiter["callCount"] += 1
                 if reg.match(line):
                     args = (line, reg, *waiter["args"])
                     if isinstance(waiter["func"], types.FunctionType):
@@ -27,9 +32,6 @@ class Hooks():
                     threading.Thread(target=waiter["func"], args=args).start()
                     waiter["dead"] = True
                     break
-                # if waiter["callCount"] >= 3:
-                #     self._logger.warning("Hanging thread: Removing waiter regex: %(regex)s" % waiter)
-                #     waiter["dead"] = True
             self.gCodeWaiters = [w for w in self.gCodeWaiters if "dead" not in w or not w["dead"]]
         except Exception as e:
             self._logger.error(traceback.format_exc())
@@ -41,8 +43,6 @@ class Hooks():
             "firmware": firmware_data
         }
 
-    # Hook for temperature messages
-    # This is active only when there are events registered to temperature changes
     def processTemp(self, comm_instance, parsed_temperatures, *args, **kwargs):
         if len(self.events) <= 0:
             return parsed_temperatures
@@ -53,8 +53,6 @@ class Hooks():
             self._logger.error(traceback.format_exc())
         return parsed_temperatures
 
-    # Check if the current message contains changes concerning registered extruder
-    # if the criteria is meat then the execution function is called
     def checkAndTriggerEvent(self, temps):
         for tool, values in temps.items():
             (curTemp, trgTemp) = values
@@ -66,11 +64,9 @@ class Hooks():
                     threading.Thread(target=event["func"], args=arg).start()
                     self.events.remove(event)
 
-    # Registering a temp event
-    # Trigger a function when the temparature
     def registerEventTemp(self, tool, targetTemp, func, *arguments):
-        if func is None or not isinstance(func, collections.Callable):
-            self._logger.warn("registerEventTemp: Attempt to register event without a function")
+        if func is None or not isinstance(func, Callable):
+            self._logger.warning("registerEventTemp: Attempt to register event without a function")
             return
 
         event = {
@@ -82,17 +78,16 @@ class Hooks():
         self._logger.debug("Registering event [%s, isFunction: %s]", event, isinstance(func, types.FunctionType))
         self.events.append(event)
 
-    # Registering a gCodeWaiter
     def registerGCodeWaiter(self, command, func, *arguments):
         reg = re.compile(".*\s*(?P<gCode>[M,G]\d{1,4})")
         if command is None or not reg.match(command.upper()):
-            self._logger.warn("registerGCodeAnswer: Attempt to register gCodeAnswer without a function or valid gCode command")
+            self._logger.warning("registerGCodeAnswer: Attempt to register gCodeAnswer without a function or valid gCode command")
             return
         self.registerRegexMsg(reg, func, *arguments)
 
     def registerRegexMsg(self, regex, func, *arguments):
-        if regex is None or func is None or not isinstance(func, collections.Callable):
-            self._logger.warn("registerRegexMsg: Attempt to register gCodeAnswer without a function or regex")
+        if regex is None or func is None or not isinstance(func, Callable):
+            self._logger.warning("registerRegexMsg: Attempt to register gCodeAnswer without a function or regex")
             return
 
         self.gCodeWaiters.append({
