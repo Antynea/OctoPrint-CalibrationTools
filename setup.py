@@ -14,14 +14,14 @@ plugin_package = "octoprint_CalibrationTools"
 plugin_name = "OctoPrint-CalibrationTools"
 
 # The plugin's version. Can be overwritten within OctoPrint's internal data via __plugin_version__ in the plugin module
-plugin_version = "1.0.5"
+plugin_version = "1.0.6"
 
 # The plugin's description. Can be overwritten within OctoPrint's internal data via __plugin_description__ in the plugin
 # module
 plugin_description = """Calibration tools"""
 
 # The plugin's author. Can be overwritten within OctoPrint's internal data via __plugin_author__ in the plugin module
-plugin_author = "Sergiu Toporjinschi"
+plugin_author = "Antynea"
 
 # The plugin's author's mail address.
 plugin_author_email = "you@example.com"
