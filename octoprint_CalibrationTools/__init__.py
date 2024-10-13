@@ -9,9 +9,9 @@ defaultSettings = {
     "eSteps": {
         "userControlsTemp": "true",
         "turnOffHotend": "",
-        "extrudeTemp": 210,
+        "extrudeTemp": 200,
         "extrudeLength": 100,
-        "extrudeSpeed": 50,
+        "extrudeSpeed": 100,
         "markLength": 120
     },
     "XYZSteps": {
@@ -32,7 +32,7 @@ defaultSettings = {
             "fanSpeed": 255,
             "noCycles": 8,
             "hotEndIndex": -1,
-            "targetTemp": 70,
+            "targetTemp": 65,
         }
     }
 }
