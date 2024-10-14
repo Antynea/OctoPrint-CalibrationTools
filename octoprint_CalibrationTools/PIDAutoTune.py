@@ -12,7 +12,7 @@ CMD_PID_START = "pid_start"
 CMD_PID_LOAD_CURRENT_VALUES = "pid_getCurrentValues"
 CMD_PID_GET_VALUES = "pid_getValues"
 
-# this regex matches:
+# This regex matches the PID responses:
 # !!DEBUG:send echo: Kp: 30.56 Ki: 3.03 Kd: 77.16
 # !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
 # !!DEBUG:send echo: p:18.84 i:1.18 d:201.41
@@ -28,9 +28,9 @@ class API(octoprint.plugin.SimpleApiPlugin):
         "hotEnd": [],
         "bed": []
     }
-    # catch for "echo: p:28.27 i:2.82 d:70.81" or "M301 P27.08 I2.51 D73.09"
+    # Catch for "echo: p:28.27 i:2.82 d:70.81" or "M304 P462.10 I85.47 D624.59"
     getPid = re.compile(allPIDsFormats, flags=re.IGNORECASE)
-    
+
     @staticmethod
     def apiCommands():
         return {
@@ -42,14 +42,15 @@ class API(octoprint.plugin.SimpleApiPlugin):
 
     def apiGateWay(self, command, data):
         self._logger.debug("DIPGateway")
+        
         if command == CMD_PID_LOAD_CURRENT_VALUES:
-            hasResult301 = Event()
             hasResult304 = Event()
-            self.registerRegexMsg(self.getPid, self.m301_m304CodeResponse, hasResult301, "hotEnd")
+
+            # Register only for M304, because M301 fails
             self.registerRegexMsg(self.getPid, self.m301_m304CodeResponse, hasResult304, "bed")
 
-            self._printer.commands(["M301", "M304"])
-            hasResult301.wait(5)
+            self._logger.debug("Sending M304 command")  # Log the command sent
+            self._printer.commands(["M304"])  # Only send M304 as M301 is not supported
             hasResult304.wait(5)
 
             return flask.jsonify({
@@ -60,7 +61,7 @@ class API(octoprint.plugin.SimpleApiPlugin):
             self.pidHotEndCycles[data["heater"]] = []
             # Two cycles are for tuning
             for i in range(0, data['noCycles'] - 2):
-                # response type !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
+                # Response type !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
                 self.registerRegexMsg(self.getPid, self.m106CodeResponse, data["heater"])
 
             if data["heater"] == "bed":
@@ -85,12 +86,12 @@ class API(octoprint.plugin.SimpleApiPlugin):
 
         # Vérifier si la réponse contient "Unknown command"
         if "Unknown command" in line:
-            self._logger.error(f"Received 'Unknown command' for {storingKey}: {line}")
+            self._logger.warning(f"Received 'Unknown command' for {storingKey}: {line}")
             if event:
                 event.set()  # Libérer l'événement même en cas d'erreur
             return
 
-        # Si c'est une réponse valide avec les PID
+        # Si c'est une réponse valide avec les PID (M304)
         match = regex.match(line)
         if match:
             self.pidCurrentValues[storingKey] = {
