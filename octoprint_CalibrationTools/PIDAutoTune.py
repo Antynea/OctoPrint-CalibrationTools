@@ -80,16 +80,25 @@ class API(octoprint.plugin.SimpleApiPlugin):
 
     @staticmethod
     def m301_m304CodeResponse(self, line, regex, event, storingKey):
-        self._logger.debug("m301_m304CodeResponse: %s", line)
-        match = regex.match(line)
-        if match:
-            self.pidCurrentValues[storingKey] = {
-                "P": match.group("p"),
-                "I": match.group("i"),
-                "D": match.group("d")
-            }
-            if event:
-                event.set()
+    self._logger.debug("m301_m304CodeResponse: %s", line)
+    
+    # Vérifier si la réponse contient "Unknown command"
+    if "Unknown command" in line:
+        self._logger.error(f"Received 'Unknown command' for {storingKey}: {line}")
+        if event:
+            event.set()  # Libérer l'événement même en cas d'erreur
+        return
+
+    # Si c'est une réponse valide avec les PID
+    match = regex.match(line)
+    if match:
+        self.pidCurrentValues[storingKey] = {
+            "P": match.group("p"),
+            "I": match.group("i"),
+            "D": match.group("d")
+        }
+        if event:
+            event.set()
 
     @staticmethod
     def m106CodeResponse(self, line, regex, storingKey):
