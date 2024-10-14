@@ -12,7 +12,7 @@ CMD_PID_START = "pid_start"
 CMD_PID_LOAD_CURRENT_VALUES = "pid_getCurrentValues"
 CMD_PID_GET_VALUES = "pid_getValues"
 
-#this regex matches:
+# this regex matches:
 # !!DEBUG:send echo: Kp: 30.56 Ki: 3.03 Kd: 77.16
 # !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
 # !!DEBUG:send echo: p:18.84 i:1.18 d:201.41
@@ -26,18 +26,19 @@ class API(octoprint.plugin.SimpleApiPlugin):
     pidCurrentValues = {}
     pidHotEndCycles = {
         "hotEnd": [],
-        "bed":[]
+        "bed": []
     }
-    #catch for "echo: p:28.27 i:2.82 d:70.81"  or   "M301 P27.08 I2.51 D73.09"
+    # catch for "echo: p:28.27 i:2.82 d:70.81" or "M301 P27.08 I2.51 D73.09"
     getPid = re.compile(allPIDsFormats, flags=re.IGNORECASE)
+    
     @staticmethod
     def apiCommands():
         return {
             CMD_PID_LOAD_CURRENT_VALUES: [],
-            CMD_PID_SAVE : [],
+            CMD_PID_SAVE: [],
             CMD_PID_GET_VALUES: [],
             CMD_PID_START: ["heater", "fanSpeed", "noCycles", "hotEndIndex", "targetTemp"]
-            }
+        }
 
     def apiGateWay(self, command, data):
         self._logger.debug("DIPGateway")
@@ -57,9 +58,9 @@ class API(octoprint.plugin.SimpleApiPlugin):
 
         if command == CMD_PID_START:
             self.pidHotEndCycles[data["heater"]] = []
-            #Two cycles are for tuning
+            # Two cycles are for tuning
             for i in range(0, data['noCycles'] - 2):
-                #response type !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
+                # response type !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
                 self.registerRegexMsg(self.getPid, self.m106CodeResponse, data["heater"])
 
             if data["heater"] == "bed":
@@ -72,35 +73,34 @@ class API(octoprint.plugin.SimpleApiPlugin):
             return flask.jsonify({
                 "data": self.pidCycles
             })
+
         if command == CMD_PID_GET_VALUES:
             self._logger.debug("pid_getValues-")
             return flask.jsonify({
                 "data": self.pidCycles
             })
 
-    @staticmethod
     def m301_m304CodeResponse(self, line, regex, event, storingKey):
-    self._logger.debug("m301_m304CodeResponse: %s", line)
-    
-    # Vérifier si la réponse contient "Unknown command"
-    if "Unknown command" in line:
-        self._logger.error(f"Received 'Unknown command' for {storingKey}: {line}")
-        if event:
-            event.set()  # Libérer l'événement même en cas d'erreur
-        return
+        self._logger.debug("m301_m304CodeResponse: %s", line)
 
-    # Si c'est une réponse valide avec les PID
-    match = regex.match(line)
-    if match:
-        self.pidCurrentValues[storingKey] = {
-            "P": match.group("p"),
-            "I": match.group("i"),
-            "D": match.group("d")
-        }
-        if event:
-            event.set()
+        # Vérifier si la réponse contient "Unknown command"
+        if "Unknown command" in line:
+            self._logger.error(f"Received 'Unknown command' for {storingKey}: {line}")
+            if event:
+                event.set()  # Libérer l'événement même en cas d'erreur
+            return
 
-    @staticmethod
+        # Si c'est une réponse valide avec les PID
+        match = regex.match(line)
+        if match:
+            self.pidCurrentValues[storingKey] = {
+                "P": match.group("p"),
+                "I": match.group("i"),
+                "D": match.group("d")
+            }
+            if event:
+                event.set()
+
     def m106CodeResponse(self, line, regex, storingKey):
         self._logger.debug("m106CodeResponse: %s", line)
         match = regex.match(line)
