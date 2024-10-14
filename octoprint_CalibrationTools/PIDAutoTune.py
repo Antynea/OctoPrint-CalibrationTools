@@ -46,11 +46,11 @@ class API(octoprint.plugin.SimpleApiPlugin):
         if command == CMD_PID_LOAD_CURRENT_VALUES:
             hasResult304 = Event()
 
-            # Register only for M304, because M301 fails
+            # Enregistrer pour le lit uniquement (M304)
             self.registerRegexMsg(self.getPid, self.m301_m304CodeResponse, hasResult304, "bed")
 
             self._logger.debug("Sending M304 command")  # Log the command sent
-            self._printer.commands(["M304"])  # Only send M304 as M301 is not supported
+            self._printer.commands(["M304"])  # Envoie seulement M304
             hasResult304.wait(5)
 
             return flask.jsonify({
