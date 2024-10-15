@@ -44,22 +44,60 @@ $(function () {
          * Get current PIDs settings for bed and hotEnd
          */
         self.getCurrentValues = function () {
-    OctoPrint.simpleApiCommand("CalibrationTools", "pid_getCurrentValues").done(function (response) {
-        console.log("Received response:", response);  // Ajouté pour voir la réponse complète
+            console.log("The 'Get Current Value' command has started.");
+            self.generalVM.notifyInfo("The 'Get Current Value' command has started.", "In Progress");
 
-        // Assigner les valeurs PID s'ils existent
-        if (response.data && response.data.hotEnd && response.data.bed) {
-            self.pidCurrentValues.hotEnd.P(response.data.hotEnd.P);
-            self.pidCurrentValues.hotEnd.I(response.data.hotEnd.I);
-            self.pidCurrentValues.hotEnd.D(response.data.hotEnd.D);
-            self.pidCurrentValues.bed.P(response.data.bed.P);
-            self.pidCurrentValues.bed.I(response.data.bed.I);
-            self.pidCurrentValues.bed.D(response.data.bed.D);
-        } else {
-            console.error("Invalid response structure:", response);
-        }
-    }).fail(self.generalVM.failFunction);
-};
+            OctoPrint.simpleApiCommand("CalibrationTools", "pid_getCurrentValues").done(function (response) {
+                console.log("Received response:", response);  // Ajouté pour voir la réponse complète
+
+                let missingValues = [];
+
+                // Vérifier et assigner les valeurs PID pour le hotEnd
+                if (response.data && response.data.hotEnd) {
+                    const hotEndP = response.data.hotEnd.P;
+                    const hotEndI = response.data.hotEnd.I;
+                    const hotEndD = response.data.hotEnd.D;
+
+                    if (hotEndP && hotEndI && hotEndD) {
+                        self.pidCurrentValues.hotEnd.P(hotEndP);
+                        self.pidCurrentValues.hotEnd.I(hotEndI);
+                        self.pidCurrentValues.hotEnd.D(hotEndD);
+                    } else {
+                        missingValues.push("HotEnd PID values");
+                    }
+                } else {
+                    missingValues.push("HotEnd PID values");
+                }
+
+                // Vérifier et assigner les valeurs PID pour le bed
+                if (response.data && response.data.bed) {
+                    const bedP = response.data.bed.P;
+                    const bedI = response.data.bed.I;
+                    const bedD = response.data.bed.D;
+
+                    if (bedP && bedI && bedD) {
+                        self.pidCurrentValues.bed.P(bedP);
+                        self.pidCurrentValues.bed.I(bedI);
+                        self.pidCurrentValues.bed.D(bedD);
+                    } else {
+                        missingValues.push("Bed PID values");
+                    }
+                } else {
+                    missingValues.push("Bed PID values");
+                }
+
+                // Afficher un message en fonction des résultats
+                if (missingValues.length === 0) {
+                    self.generalVM.notify("PID values successfully updated.", "Success", "success");
+                } else {
+                    const warningMessage = `Warning: Some PID values are missing: ${missingValues.join(", ")}. Please verify the printer's response.`;
+                    self.generalVM.notifyWarning(warningMessage, "Warning");
+                }
+            }).fail(function () {
+                self.generalVM.notifyError("Failed to retrieve PID values. Please check the printer connection.", "Error");
+            });
+        };
+
 
 
         self.onBeforeBinding = self.onUserLoggedIn = self.onUserLoggedOut = function () {
