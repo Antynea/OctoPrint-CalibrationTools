@@ -44,15 +44,23 @@ $(function () {
          * Get current PIDs settings for bed and hotEnd
          */
         self.getCurrentValues = function () {
-            OctoPrint.simpleApiCommand("CalibrationTools", "pid_getCurrentValues").done(function (response) {
-                self.pidCurrentValues.hotEnd.P(response.data.hotEnd.P);
-                self.pidCurrentValues.hotEnd.I(response.data.hotEnd.I);
-                self.pidCurrentValues.hotEnd.D(response.data.hotEnd.D);
-                self.pidCurrentValues.bed.P(response.data.bed.P);
-                self.pidCurrentValues.bed.I(response.data.bed.I);
-                self.pidCurrentValues.bed.D(response.data.bed.D);
-            }).fail(self.generalVM.failFunction);
-        };
+    OctoPrint.simpleApiCommand("CalibrationTools", "pid_getCurrentValues").done(function (response) {
+        console.log("Received response:", response);  // Ajouté pour voir la réponse complète
+
+        // Assigner les valeurs PID s'ils existent
+        if (response.data && response.data.hotEnd && response.data.bed) {
+            self.pidCurrentValues.hotEnd.P(response.data.hotEnd.P);
+            self.pidCurrentValues.hotEnd.I(response.data.hotEnd.I);
+            self.pidCurrentValues.hotEnd.D(response.data.hotEnd.D);
+            self.pidCurrentValues.bed.P(response.data.bed.P);
+            self.pidCurrentValues.bed.I(response.data.bed.I);
+            self.pidCurrentValues.bed.D(response.data.bed.D);
+        } else {
+            console.error("Invalid response structure:", response);
+        }
+    }).fail(self.generalVM.failFunction);
+};
+
 
         self.onBeforeBinding = self.onUserLoggedIn = self.onUserLoggedOut = function () {
             self.pid.hotEnd.fanSpeed(self.settingsViewModel.settings.plugins.CalibrationTools.pid.hotEnd.fanSpeed());
