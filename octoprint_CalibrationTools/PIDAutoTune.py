@@ -13,22 +13,19 @@ CMD_PID_LOAD_CURRENT_VALUES = "pid_getCurrentValues"
 CMD_PID_GET_VALUES = "pid_getValues"
 
 # This regex matches the PID responses:
-# !!DEBUG:send echo: Kp: 30.56 Ki: 3.03 Kd: 77.16
-# !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
-# !!DEBUG:send echo: p:18.84 i:1.18 d:201.41
-# !!DEBUG:send p:18.84 i:1.18 d:201.41
-# !!DEBUG:send echo: M304 P131.06 I11.79 D971.23
-# !!DEBUG:send M304 P131.06 I11.79 D971.23
 allPIDsFormats = r".*p:?\s*(?P<p>-?\d+(\.\d+)?)\s*i:?\s*(?P<i>-?\d+(\.\d+)?)\s*d:?\s*(?P<d>-?\d+(\.\d+)?)"
 
 class API(octoprint.plugin.SimpleApiPlugin):
     pidHotEndCycles = []
-    pidCurrentValues = {}
+    pidCurrentValues = {
+        "hotEnd": {},
+        "bed": {}
+    }
     pidHotEndCycles = {
         "hotEnd": [],
         "bed": []
     }
-    # Catch for "echo: p:28.27 i:2.82 d:70.81" or "M304 P462.10 I85.47 D624.59"
+    # Regex for extracting PID values
     getPid = re.compile(allPIDsFormats, flags=re.IGNORECASE)
 
     @staticmethod
@@ -44,24 +41,30 @@ class API(octoprint.plugin.SimpleApiPlugin):
         self._logger.debug("DIPGateway")
         
         if command == CMD_PID_LOAD_CURRENT_VALUES:
+            hasResult301 = Event()
             hasResult304 = Event()
 
-            # Enregistrer pour le lit uniquement (M304)
+            # Enregistrer les réponses pour hotEnd (M301) et bed (M304)
+            self.registerRegexMsg(self.getPid, self.m301_m304CodeResponse, hasResult301, "hotEnd")
             self.registerRegexMsg(self.getPid, self.m301_m304CodeResponse, hasResult304, "bed")
 
-            self._logger.debug("Sending M304 command")  # Log the command sent
-            self._printer.commands(["M304"])  # Envoie seulement M304
+            # Envoie des commandes pour hotEnd et bed
+            self._logger.debug("Sending M301 and M304 commands")
+            self._printer.commands(["M301", "M304"])
+            hasResult301.wait(5)
             hasResult304.wait(5)
 
             return flask.jsonify({
-                "data": self.pidCurrentValues
+                "data": {
+                    "hotEnd": self.pidCurrentValues.get("hotEnd", {}),
+                    "bed": self.pidCurrentValues.get("bed", {})
+                }
             })
 
         if command == CMD_PID_START:
             self.pidHotEndCycles[data["heater"]] = []
             # Two cycles are for tuning
             for i in range(0, data['noCycles'] - 2):
-                # Response type !!DEBUG:send Kp: 30.56 Ki: 3.03 Kd: 77.16
                 self.registerRegexMsg(self.getPid, self.m106CodeResponse, data["heater"])
 
             if data["heater"] == "bed":
@@ -91,7 +94,7 @@ class API(octoprint.plugin.SimpleApiPlugin):
                 event.set()  # Libérer l'événement même en cas d'erreur
             return
 
-        # Si c'est une réponse valide avec les PID (M304)
+        # Si c'est une réponse valide avec les PID (M301 ou M304)
         match = regex.match(line)
         if match:
             self.pidCurrentValues[storingKey] = {
