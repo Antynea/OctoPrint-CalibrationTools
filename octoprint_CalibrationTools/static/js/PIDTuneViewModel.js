@@ -88,13 +88,13 @@ $(function () {
 
                 // Afficher un message en fonction des résultats
                 if (missingValues.length === 0) {
-                    self.generalVM.notify("PID values successfully updated.", "Success", "success");
+                    self.generalVM.notify("PID values successfully updated.", "Success", "success", true);
                 } else {
-                    const warningMessage = `Warning: Some PID values are missing: ${missingValues.join(", ")}. Please verify the printer's response.`;
-                    self.generalVM.notifyWarning(warningMessage, "Warning");
+                    const warningMessage = `Some PID values are missing: ${missingValues.join(", ")}. Please verify the printer's response.`;
+                    self.generalVM.notify("Warning", warningMessage, "warning", true);
                 }
             }).fail(function () {
-                self.generalVM.notifyError("Failed to retrieve PID values. Please check the printer connection.", "Error");
+                self.generalVM.notifyError("Error", "Invalid response structure.", "Error", true);
             });
         };
 
