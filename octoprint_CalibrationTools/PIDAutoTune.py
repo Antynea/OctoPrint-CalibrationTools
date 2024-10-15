@@ -21,6 +21,11 @@ class API(octoprint.plugin.SimpleApiPlugin):
         "hotEnd": {},
         "bed": {}
     }
+    pidHotEndCycles = {
+        "hotEnd": [],
+        "bed": []
+        }
+    gCodeWaiters = []
 
     getPid = re.compile(allPIDsFormats, flags=re.IGNORECASE)
 
