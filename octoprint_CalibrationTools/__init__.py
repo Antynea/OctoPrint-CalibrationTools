@@ -9,9 +9,9 @@ defaultSettings = {
     "eSteps": {
         "userControlsTemp": "true",
         "turnOffHotend": "",
-        "extrudeTemp": 210,
+        "extrudeTemp": 200,
         "extrudeLength": 100,
-        "extrudeSpeed": 50,
+        "extrudeSpeed": 100,
         "markLength": 120
     },
     "XYZSteps": {
@@ -32,7 +32,7 @@ defaultSettings = {
             "fanSpeed": 255,
             "noCycles": 8,
             "hotEndIndex": -1,
-            "targetTemp": 70,
+            "targetTemp": 65,
         }
     }
 }
@@ -102,7 +102,7 @@ class CalibrationtoolsPlugin(
 
                 # version check: github repository
                 "type": "github_release",
-                "user": "SergiuToporjinschi",
+                "user": "Antynea",
                 "repo": "OctoPrint-CalibrationTools",
                 "current": self._plugin_version,
 
@@ -121,8 +121,8 @@ __plugin_name__ = "Calibration Tools"
 # Python 2. New plugins should make sure to run under both versions for now. Uncomment one of the following
 # compatibility flags according to what Python versions your plugin supports!
 # __plugin_pythoncompat__ = ">=2.7,<3" # only python 2
-# __plugin_pythoncompat__ = ">=3,<4" # only python 3
-__plugin_pythoncompat__ = ">=2.7,<4"  # python 2 and 3
+__plugin_pythoncompat__ = ">=3,<4" # only python 3
+# __plugin_pythoncompat__ = ">=2.7,<4"  # python 2 and 3
 
 
 def __plugin_load__():

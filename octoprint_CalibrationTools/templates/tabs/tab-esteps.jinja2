@@ -3,7 +3,7 @@
 {{ snipped.subSection("Process description", true) }}
 
 You will have to:
-<lu>
+<ul>
     <li>Mark a specific length of filament at the extruder motor entrance;</li>
     <li>Set the hot-end on a printing temperature in E-Steps tab;</li>
     <li>Set the extrusion length and speed;</li>
@@ -11,7 +11,7 @@ You will have to:
     <li>When extrusion finished, check the remaining length between the extruder and the filament mark location;</li>
     <li>Refresh the current values from EEPROM;</li>
     <li>Feed data collected in E-Steps tab and save the results in EEPROM;</li>
-</lu>
+</ul>
 <br>
 
 {{ snipped.quote("
@@ -21,7 +21,6 @@ reliable.
 ", "<a href='https://teachingtechyt.github.io/calibration.html#esteps' target='_blank'>teachingtechyt.github.io</a>", "text-warning") }}
 
 {{ snipped.subSection("Parameters", true) }}
-
 
 <!-- M104 S210 command  -->
 <div class="row-fluid">
@@ -34,7 +33,7 @@ reliable.
         <div class="input-prepend input-append">
             {{ snipped.linkToMarlin("M104", "Marlin website") }}
             <span class="add-on" title="Command to preheat the tool before testing">M104&nbsp;&nbsp;&nbsp;S</span>
-            <input type="number" id="temperature" class="input-mini" step="1" min="180" max="280"
+            <input type="number" id="temperature" class="input-mini" step="1" min="0"
                 title="The temperature used to extrude in testing (&#186;C)&#013;Is better to be a bit higher then usual for reducing the nuzzle pressure" data-bind="value: $root.testParam.extrudeTemp">
         </div>
     </div>
@@ -50,25 +49,50 @@ reliable.
         <div class="input-prepend input-append">
             {{ snipped.linkToMarlin("G000-G001", "Marlin website") }}
             <span class="add-on" title="Command to extrude filament for testing">G1&nbsp;&nbsp;&nbsp;E</span>
-            <input type="number" id="extrusionLenSpeed" class="input-mini" step="1" min="50" title="The length of filament to be extruded in testing (in millimeters)" data-bind="value: $root.testParam.extrudeLength">
+            <input type="number" id="extrusionLenSpeed" class="input-mini" step="1" min="0" title="The length of filament to be extruded in testing (in millimeters)" data-bind="value: $root.testParam.extrudeLength">
             <span class="add-on" title="Command to extrude filament for testing">&nbsp;&nbsp;&nbsp;F</span>
-            <input type="number" id="extrusionLenSpeed" class="input-mini" step="1" min="10" max="400" title="The speed to extrude filament in testing&#013;Lowest possible (mm/s)"
-                data-bind="value: $root.testParam.extrudeSpeed">
+            <input type="number" id="extrusionLenSpeed" class="input-mini" step="1" min="0" title="The speed to extrude filament in testing&#013;Lowest possible (mm/s)" data-bind="value: $root.testParam.extrudeSpeed">
         </div>
     </div>
 </div>
 
+<!-- Extrusion marking length -->
 {{ snipped.field("Extrusion marking length", "The length marked on filament before extrusion. ", "number", "$root.testParam.markLength", "true", "mm", 0.01, 50) }}
 
+<!-- Ligne contenant Reset, Start extrusion, et Stop extrusion -->
 <div class="row-fluid" style="margin-bottom: 5px;">
     <div data-bind="class: $root.columnLabelCls()"></div>
+    
     <div data-bind="class: $root.columnFieldCls()">
-        <button class="btn btn-success"
-            data-bind="click: $root.startExtrusion, enable: !$root.startExtrusionActive() && $root.loginStateViewModel.isAdmin() && $root.controlViewModel.isOperational() && (!$root.controlViewModel.isPrinting())"
-            title="This will trigger M90, M83, G1 E100 F50, M82, G90 in order for extruding filament">
-            <i class="fas fa-play" style="color:false" data-color="false"></i>&nbsp&nbsp
-            Start extrusion
-        </button>
+        <!-- Conteneur pour les boutons avec Flexbox -->
+        <div class="button-group" style="display: flex; justify-content: flex-start; align-items: center; gap: 10px; flex-wrap: nowrap;">
+            <!-- Bouton Reset -->
+            <button class="btn btn-secondary reset-button"
+                data-bind="click: $root.resetValues"
+                style="width: 150px;"
+                title="This will reset the values of Heating, Extrusion length & speed, and Extrusion marking length">
+                <i class="fas fa-undo"></i>&nbsp;&nbsp;
+                Reset
+            </button>
+
+            <!-- Bouton Start extrusion -->
+            <button class="btn btn-success"
+                data-bind="click: $root.startExtrusion, enable: !$root.startExtrusionActive() && $root.loginStateViewModel.isAdmin() && $root.controlViewModel.isOperational() && (!$root.controlViewModel.isPrinting())"
+                style="width: 150px;"
+                title="This will trigger M90, M83, G1 E100 F100, M82, G90 in order for extruding filament">
+                <i class="fas fa-play"></i>&nbsp;&nbsp;
+                Start
+            </button>
+
+            <!-- Bouton Stop extrusion -->
+            <button class="btn btn-danger"
+                data-bind="click: $root.stopExtrusion, enable: $root.startExtrusionActive() && $root.loginStateViewModel.isAdmin() && $root.controlViewModel.isOperational() && (!$root.controlViewModel.isPrinting())"
+                style="width: 150px;"
+                title="This will stop the extrusion immediately (M410)">
+                <i class="fas fa-stop"></i>&nbsp;&nbsp;
+                Stop
+            </button>
+        </div>
     </div>
 </div>
 
@@ -107,7 +131,7 @@ reliable.
         <div class="input-prepend input-append">
             {{ snipped.linkToMarlin("M092", "Marlin website") }}
             <span class="add-on" title="Command to change number of steps/mm for E axe">M92 E</span>
-            <input type="number" title="Command to change number of steps/mm for E axe" class="input-small numberDisplay" step="0.01" min="10" max="400" data-bind="value: $root.results.newSteps(), enable:false">
+            <input type="number" title="Command to change number of steps/mm for E axe" class="input-small numberDisplay" step="0.01" min="0" data-bind="value: $root.results.newSteps(), enable:false">
             {{ snipped.m500Icon() }}
         </div>
     </div>
@@ -116,7 +140,8 @@ reliable.
 <div class="row-fluid" style="margin-bottom: 5px;">
     <div data-bind="class: $root.columnLabelCls()"></div>
     <div data-bind="class: $root.columnFieldCls()">
-        <button class="btn btn-primary" data-bind="click: $root.saveESteps, enable: $root.loginStateViewModel.isAdmin() && $root.controlViewModel.isOperational() && (!$root.controlViewModel.isPrinting())"
+        <button class="btn btn-primary" 
+            data-bind="click: $root.saveESteps, enable: $root.stepsLoaded() && $root.loginStateViewModel.isAdmin() && $root.controlViewModel.isOperational() && (!$root.controlViewModel.isPrinting())" 
             title="Saves the new calculated value of steps/mm on printer EEPROM">
             <i class="fas fa-save" data-color="#000000"></i>&nbsp&nbsp
             Save the new value

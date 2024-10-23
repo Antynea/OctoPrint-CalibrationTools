@@ -10,16 +10,20 @@ import octoprint.plugin
 CMD_ESTEPS_LOAD_STEPS = "eSteps_load"
 CMD_ESTEPS_START_EXTRUSION = "eSteps_startExtrusion"
 CMD_ESTEPS_SAVE = "eSteps_save"
+CMD_ESTEPS_STOP_EXTRUSION = "eSteps_stopExtrusion"
 
 class API(octoprint.plugin.SimpleApiPlugin):
-
     @staticmethod
     def apiCommands():
         return {
             CMD_ESTEPS_SAVE: [],
             CMD_ESTEPS_LOAD_STEPS: [],
-            CMD_ESTEPS_START_EXTRUSION: ['extrudeLength','extrudeSpeed','extrudeTemp']
+            CMD_ESTEPS_START_EXTRUSION: ['extrudeLength','extrudeSpeed','extrudeTemp'],
+            CMD_ESTEPS_STOP_EXTRUSION: []
         }
+    def startExtrusionActive(self):
+        # Vérifie si l'extrusion est en cours d'exécution
+        return getattr(self, "_extrusion_active", False)
 
     def apiGateWay(self, command, data):
         if command == CMD_ESTEPS_LOAD_STEPS:
@@ -40,16 +44,28 @@ class API(octoprint.plugin.SimpleApiPlugin):
             return flask.jsonify({
                 "data": self.data["steps"]
             })
+
         if command == CMD_ESTEPS_START_EXTRUSION:
             self._logger.debug("Heating the extruder [%s]", data)
             if not self._printer.is_ready():
                 self._logger.warning("Printer not ready, operation canceled")
-                return flask.abort(503,"Printer not ready, operation canceled")
+                return flask.abort(503, "Printer not ready, operation canceled")
 
-            # Register event to be trigger when temp is achieved
+            # Register event to be triggered when temp is achieved
             self.registerEventTemp("T0", int(data["extrudeTemp"]), self.startExtrusion, data["extrudeLength"], data["extrudeSpeed"])
+            
             # Heating HotEnd
             self._printer.commands("M104 S%(extrudeTemp)s" % data)
+            
+            # Return success response
+            return flask.jsonify({"status": "started"})
+
+        if command == CMD_ESTEPS_STOP_EXTRUSION:
+            if self.startExtrusionActive():
+                self._logger.info("Stopping extrusion immediately with M410")
+                self.stopExtrusion(self)# Emergency stop to halt all movement
+            else:
+                self._logger.warning("Stop extrusion command issued, but extrusion is not active")
 
         if command == CMD_ESTEPS_SAVE:
             if (("newESteps" not in data or data["newESteps"] <= 0)
@@ -77,17 +93,34 @@ class API(octoprint.plugin.SimpleApiPlugin):
 
 
 ############## HANDLERS ##############
+
     @staticmethod
     def startExtrusion(self, temps, extrudeLength, extrudeSpeed, *args):
-        self._logger.debug("Temperature achieved, extrusion started [temps:%s, extrudeLength:%s, extrudeSpeed:%s, args:%s]",
-        temps, extrudeLength, extrudeSpeed, args)
-
-        # Extrude
+        self._logger.debug("Temperature achieved, extrusion started [temps:%s, extrudeLength:%s, extrudeSpeed:%s, args:%s]", temps, extrudeLength, extrudeSpeed, args)
+        self._extrusion_active = True
+        self._logger.debug("Extrusion started")
+        # Extrude the specified amount at the given speed
         self._printer.extrude(amount=int(extrudeLength), speed=int(extrudeSpeed))
+        
+        # Attendre la fin des mouvements
+        self._logger.debug("Envoi de M400, attente de l'achèvement des mouvements...")
+        self._printer.commands("M400")
 
     @staticmethod
+    def stopExtrusion(self, *args):
+        # Log the stop event
+        self._logger.debug("Stopping extrusion now [args:%s]", args)
+        self._extrusion_active = False
+        # Issue the stop command to immediately halt extrusion
+        self._printer.commands("M410")  # Emergency stop command
+
+        # Notify frontend about extrusion stop completion
+        self._logger.debug("Sending 'extrusion_stopped' message to frontend")
+        self._plugin_manager.send_plugin_message(self._identifier, {"state": "extrusion_stopped"})
+        
+    @staticmethod
     def m92GCodeResponse(self, line, regex, event):
-        reg = re.compile(".*\s*(?P<command>(?P<gCode>M\d{1,3}) X(?P<xVal>\d{1,3}.\d{1,3}) Y(?P<yVal>\d{1,3}.\d{1,3}) Z(?P<zVal>\d{1,3}.\d{1,3}) E(?P<eVal>\d{1,3}.\d{1,3}))")
+        reg = re.compile(r".*\s*(?P<command>(?P<gCode>M\d{1,3})\s*X(?P<xVal>\d+(?:\.\d+)?)\s*Y(?P<yVal>\d+(?:\.\d+)?)\s*Z(?P<zVal>\d+(?:\.\d+)?)\s*E(?P<eVal>\d+(?:\.\d+)?))")
         isM92command = reg.match(line)
         if isM92command:
             command = isM92command.group("command")
